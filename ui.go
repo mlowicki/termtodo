@@ -9,7 +9,6 @@ import (
 	blinkt "github.com/alexellis/blinkt_go"
 	"github.com/mattn/go-runewidth"
 	"github.com/nsf/termbox-go"
-	cron "github.com/robfig/cron/v3"
 )
 
 type UI struct {
@@ -74,17 +73,8 @@ func (ui *UI) Close() {
 	termbox.Close()
 }
 
-func (ui *UI) parseCron(input string) (cron.Schedule, error) {
-	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	sched, err := parser.Parse(input)
-	if err != nil {
-		return nil, err
-	}
-	return sched, nil
-}
-
 func (ui *UI) parseTime(input []byte) (time.Duration, error) {
-	re := regexp.MustCompile(`(\d)+([smhd])`)
+	re := regexp.MustCompile(`(\d+)([smhd])`)
 	match := re.FindSubmatch(input)
 	if match == nil {
 		return 0, errors.New("invalid time format")
@@ -118,21 +108,26 @@ func (ui *UI) HandleCommand(tokens []string) {
 		}
 		t, err := ui.parseTime([]byte(tokens[1]))
 		if err != nil {
-			cron, err := ui.parseCron(tokens[1])
+			trigger, err := NewTrigger(
+				tokens[2],
+				tokens[1],
+				time.Now(),
+				-1, // trigger indefinitely.
+			)
 			if err != nil {
-				panic("add: cannot parse schedule")
-			}
-			trigger := &CronTrigger{
-				Name:        tokens[2],
-				Cron:        cron,
-				LastTrigger: time.Now(),
+				panic(err)
 			}
 			ui.Scheduler.AddTriggerCh <- trigger
 			return
 		}
-		trigger := &OneTimeTrigger{
-			Name: tokens[2],
-			When: time.Now().Add(t),
+		trigger, err := NewTrigger(
+			tokens[2],
+			"*/1 * * * * *",
+			time.Now().Add(t),
+			1, // one-time trigger.
+		)
+		if err != nil {
+			panic(err)
 		}
 		ui.Scheduler.AddTriggerCh <- trigger
 	case "done":

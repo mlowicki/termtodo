@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,48 +13,53 @@ type Todo struct {
 	ID   string
 }
 
-type Trigger interface {
-	Check() *Todo
-	Next() time.Time
+type Trigger struct {
+	Name  string
+	Cron  string
+	After time.Time
+	Count int
 }
 
-type OneTimeTrigger struct {
-	Name      string
-	When      time.Time
-	triggered bool
+func NewTrigger(name, cron string, after time.Time, count int) (Trigger, error) {
+	t := Trigger{
+		Name:  name,
+		Cron:  cron,
+		After: after,
+		Count: count,
+	}
+	_, err := t.Schedule()
+	return t, err
 }
 
-func (t *OneTimeTrigger) Next() time.Time {
-	if t.triggered {
+func (t *Trigger) Schedule() (cron.Schedule, error) {
+	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	sched, err := parser.Parse(t.Cron)
+	if err != nil {
+		return nil, fmt.Errorf("invalid schedule: %w", err)
+	}
+	return sched, nil
+}
+
+func (t *Trigger) Next() time.Time {
+	if t.Count == 0 {
 		return time.Time{}
 	}
-	return t.When
-}
-
-func (t *OneTimeTrigger) Check() *Todo {
-	if t.Next().IsZero() || time.Now().Before(t.When) {
-		return nil
+	sch, err := t.Schedule()
+	if err != nil {
+		panic(err)
 	}
-	t.triggered = true
-	return &Todo{Name: t.Name, ID: uuid.New().String()}
+	return sch.Next(t.After)
 }
 
-type CronTrigger struct {
-	Name        string
-	Cron        cron.Schedule
-	LastTrigger time.Time
-}
-
-func (t *CronTrigger) Next() time.Time {
-	return t.Cron.Next(t.LastTrigger)
-}
-
-func (t *CronTrigger) Check() *Todo {
+func (t *Trigger) Check() *Todo {
 	now := time.Now()
-	if t.Next().After(now) {
+	if t.Count == 0 || t.Next().After(now) {
 		return nil
 	}
-	t.LastTrigger = now
+	t.After = now
+	if t.Count != -1 {
+		t.Count--
+	}
 	return &Todo{Name: t.Name, ID: uuid.New().String()}
 }
 
