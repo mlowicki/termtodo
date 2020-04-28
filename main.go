@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,70 +66,123 @@ func (t *Trigger) Check() *Todo {
 	return &Todo{Name: t.Name, ID: uuid.New().String()}
 }
 
+// A DB read / writes scheduler's data from / to disk.
+type DB struct {
+	Todos    map[string]Todo
+	Triggers []Trigger
+	filename string `json:"-"`
+}
+
+// NewDB returns a DB located in filename.
+func NewDB(filename string) (*DB, error) {
+	db := DB{filename: filename, Todos: make(map[string]Todo)}
+	err := db.Read()
+	if err != nil {
+		return nil, err
+	}
+	return &db, nil
+}
+
+// Save stores the database onto disk.
+func (db *DB) Write() error {
+	encoded, err := json.MarshalIndent(*db, "", "  ")
+	if err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(db.filename, encoded, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Reads loads the database from disk.
+func (db *DB) Read() error {
+	encoded, err := ioutil.ReadFile(db.filename)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	err = json.Unmarshal(encoded, db)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type Scheduler struct {
-	triggers     []Trigger
-	todos        []Todo
 	TodosCh      chan []Todo
 	AddTriggerCh chan Trigger
 	DelTodoCh    chan string
 	timer        *time.Timer
-}
-
-func (sch *Scheduler) delTodo(id string) {
-	for i, todo := range sch.todos {
-		if id == todo.ID {
-			sch.todos = append(sch.todos[:i], sch.todos[i+1:]...)
-		}
-	}
-	todos := make([]Todo, len(sch.todos))
-	copy(todos, sch.todos)
-	sch.TodosCh <- todos
+	db           *DB
 }
 
 func (sch *Scheduler) checkTriggers() {
 	added := false
 	triggers := make([]Trigger, 0)
-	for _, trigger := range sch.triggers {
+	for _, trigger := range sch.db.Triggers {
 		if todo := trigger.Check(); todo != nil {
-			sch.todos = append(sch.todos, *todo)
+			sch.db.Todos[(*todo).ID] = *todo
 			added = true
 		}
 		if !trigger.Next().IsZero() {
 			triggers = append(triggers, trigger)
 		}
 	}
-	sch.triggers = triggers
+	sch.db.Triggers = triggers
 	if added {
-		todos := make([]Todo, len(sch.todos))
-		copy(todos, sch.todos)
-		sch.TodosCh <- todos
+		err := sch.db.Write()
+		if err != nil {
+			panic(err)
+		}
+		sch.sendTodos()
 	}
+}
+
+func (sch *Scheduler) sendTodos() {
+	todos := make([]Todo, 0, len(sch.db.Todos))
+	for _, todo := range sch.db.Todos {
+		todos = append(todos, todo)
+	}
+	sch.TodosCh <- todos
 }
 
 func NewScheduler() *Scheduler {
 	sch := Scheduler{
-		triggers:     make([]Trigger, 0),
-		todos:        make([]Todo, 0),
 		TodosCh:      make(chan []Todo),
 		AddTriggerCh: make(chan Trigger),
 		DelTodoCh:    make(chan string),
 		timer:        time.NewTimer(time.Millisecond),
 	}
+	db, err := NewDB(".termtodo.db")
+	if err != nil {
+		panic(err)
+	}
+	sch.db = db
 	go func() {
+		sch.sendTodos()
 		for {
 			timerExpired := false
 			select {
 			case id := <-sch.DelTodoCh:
-				sch.delTodo(id)
+				delete(db.Todos, id)
+				err := sch.db.Write()
+				if err != nil {
+					panic(err)
+				}
+				sch.sendTodos()
 			case trigger := <-sch.AddTriggerCh:
-				sch.triggers = append(sch.triggers, trigger)
+				db.Triggers = append(db.Triggers, trigger)
 				sch.checkTriggers()
 			case <-sch.timer.C:
 				sch.checkTriggers()
 				timerExpired = true
 			}
 			nextCheck := time.Now().Add(time.Hour * 24 * 7)
-			for _, trigger := range sch.triggers {
+			for _, trigger := range sch.db.Triggers {
 				n := trigger.Next()
 				if !n.IsZero() && n.Before(nextCheck) {
 					nextCheck = n
