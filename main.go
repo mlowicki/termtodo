@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"time"
 
@@ -150,18 +152,14 @@ func (sch *Scheduler) sendTodos() {
 	sch.TodosCh <- todos
 }
 
-func NewScheduler() *Scheduler {
+func NewScheduler(db *DB) *Scheduler {
 	sch := Scheduler{
 		TodosCh:      make(chan []Todo),
 		AddTriggerCh: make(chan Trigger),
 		DelTodoCh:    make(chan string),
 		timer:        time.NewTimer(time.Millisecond),
+		db:           db,
 	}
-	db, err := NewDB(".termtodo.db")
-	if err != nil {
-		panic(err)
-	}
-	sch.db = db
 	go func() {
 		sch.sendTodos()
 		for {
@@ -198,7 +196,13 @@ func NewScheduler() *Scheduler {
 }
 
 func main() {
-	scheduler := NewScheduler()
+	var dbpath = flag.String("dbpath", ".termtodo.db", "path to database")
+	flag.Parse()
+	db, err := NewDB(*dbpath)
+	if err != nil {
+		log.Fatalf("Cannot initialize database: %s", err)
+	}
+	scheduler := NewScheduler(db)
 	ui := NewUI(scheduler)
 	defer ui.Close()
 	ui.Run()
