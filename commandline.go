@@ -32,40 +32,11 @@ func voffset(text []byte, boffset int) int {
 	return res
 }
 
-func byte_slice_grow(s []byte, desired_cap int) []byte {
-	if cap(s) < desired_cap {
-		ns := make([]byte, len(s), desired_cap)
-		copy(ns, s)
-		return ns
-	}
-	return s
-}
-
-func byte_slice_remove(text []byte, from, to int) []byte {
-	size := to - from
-	copy(text[from:], text[to:])
-	text = text[:len(text)-size]
-	return text
-}
-
-func byte_slice_insert(text []byte, offset int, what []byte) []byte {
-	n := len(text) + len(what)
-	text = byte_slice_grow(text, n)
-	text = text[:n]
-	copy(text[offset+len(what):], text[offset:])
-	copy(text[offset:], what)
-	return text
-}
-
 type CommandLine struct {
 	text           []byte
 	line_voffset   int
 	cursor_boffset int // cursor offset in bytes
 	cursor_voffset int // visual cursor offset in termbox cells
-}
-
-func (eb *CommandLine) Text() string {
-	return string(eb.text)
 }
 
 // Draws the CommandLine in the given location, 'h' is not used at the moment
@@ -164,22 +135,18 @@ func (eb *CommandLine) DeleteRuneBackward() {
 
 	eb.MoveCursorOneRuneBackward()
 	_, size := eb.RuneUnderCursor()
-	eb.text = byte_slice_remove(eb.text, eb.cursor_boffset, eb.cursor_boffset+size)
-}
-
-func (eb *CommandLine) DeleteTheRestOfTheLine() {
-	eb.text = eb.text[:eb.cursor_boffset]
+	eb.text = byteSliceRemove(eb.text, eb.cursor_boffset, eb.cursor_boffset+size)
 }
 
 func (eb *CommandLine) DeleteAll() {
 	eb.MoveCursorTo(0)
-	eb.text = byte_slice_remove(eb.text, 0, len(eb.text))
+	eb.text = byteSliceRemove(eb.text, 0, len(eb.text))
 }
 
 func (eb *CommandLine) InsertRune(r rune) {
 	var buf [utf8.UTFMax]byte
 	n := utf8.EncodeRune(buf[:], r)
-	eb.text = byte_slice_insert(eb.text, eb.cursor_boffset, buf[:n])
+	eb.text = byteSliceInsert(eb.text, eb.cursor_boffset, buf[:n])
 	eb.MoveCursorOneRuneForward()
 }
 
@@ -211,14 +178,12 @@ func (cl *CommandLine) Run() <-chan []string {
 				case termbox.KeyTab:
 				case termbox.KeySpace:
 					cl.InsertRune(' ')
-				case termbox.KeyCtrlK:
-					cl.DeleteTheRestOfTheLine()
 				case termbox.KeyHome, termbox.KeyCtrlA:
 					cl.MoveCursorTo(0)
 				case termbox.KeyEnd, termbox.KeyCtrlE:
 					cl.MoveCursorTo(len(cl.text))
 				case termbox.KeyEnter:
-					tokens, err := gsq.Split(cl.Text())
+					tokens, err := gsq.Split(string(cl.text))
 					if err != nil {
 						panic(err)
 					}
