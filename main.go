@@ -135,11 +135,11 @@ func (sch *Scheduler) checkTriggers() {
 		}
 	}
 	sch.db.Triggers = triggers
+	err := sch.db.Write()
+	if err != nil {
+		panic(err)
+	}
 	if added {
-		err := sch.db.Write()
-		if err != nil {
-			panic(err)
-		}
 		sch.sendTodos()
 	}
 }
