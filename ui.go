@@ -73,30 +73,43 @@ func (ui *UI) Close() {
 	termbox.Close()
 }
 
-func (ui *UI) parseTime(input []byte) (time.Duration, error) {
-	re := regexp.MustCompile(`(\d+)([smhd])`)
-	match := re.FindSubmatch(input)
-	if match == nil {
-		return 0, errors.New("invalid time format")
+var errInvalidTime = errors.New("invalid time")
+
+func (ui *UI) parseTime(input []byte) (time.Time, error) {
+	if len(input) == 0 {
+		return time.Time{}, errInvalidTime
 	}
-	num, err := strconv.Atoi(string(match[1]))
-	if err != nil {
-		return 0, err
+	if input[0] == '+' {
+		re := regexp.MustCompile(`(\d+)([smhd])`)
+		match := re.FindSubmatch(input[1:])
+		if match == nil {
+			return time.Time{}, errInvalidTime
+		}
+		num, err := strconv.Atoi(string(match[1]))
+		if err != nil {
+			return time.Time{}, err
+		}
+		var unit time.Duration
+		switch string(match[2]) {
+		case "s":
+			unit = time.Second
+		case "m":
+			unit = time.Minute
+		case "h":
+			unit = time.Hour
+		case "d":
+			unit = time.Hour * 24
+		default:
+			return time.Time{}, errInvalidTime
+		}
+		return time.Now().Add(unit * time.Duration(num)), nil
+	} else if input[0] == '@' {
+		now := time.Now()
+		t, err := time.ParseInLocation("15:04", string(input[1:]), now.Location())
+		t = t.AddDate(now.Year(), int(now.Month())-1, now.Day()-1)
+		return t, err
 	}
-	var unit time.Duration
-	switch string(match[2]) {
-	case "s":
-		unit = time.Second
-	case "m":
-		unit = time.Minute
-	case "h":
-		unit = time.Hour
-	case "d":
-		unit = time.Hour * 24
-	default:
-		return 0, errors.New("invalid time unit")
-	}
-	return unit * time.Duration(num), nil
+	return time.Time{}, errInvalidTime
 }
 
 // TODO display error to user instead panicking
@@ -123,7 +136,7 @@ func (ui *UI) HandleCommand(tokens []string) {
 		trigger, err := NewTrigger(
 			tokens[2],
 			"*/1 * * * * *",
-			time.Now().Add(t),
+			t,
 			1, // one-time trigger.
 		)
 		if err != nil {
