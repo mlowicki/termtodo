@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	blinkt "github.com/alexellis/blinkt_go"
 	"github.com/mattn/go-runewidth"
 	"github.com/nsf/termbox-go"
 )
@@ -15,7 +14,7 @@ type UI struct {
 	cl        *CommandLine
 	Scheduler *Scheduler
 	todos     []Todo
-	alertCh   chan struct{}
+	blinkt    *Blinkt
 }
 
 func NewUI(scheduler *Scheduler) *UI {
@@ -50,26 +49,23 @@ func (ui *UI) Redraw() {
 		ui.print(0, i, todo.Name)
 	}
 	if len(ui.todos) > 0 {
-		if ui.alertCh == nil {
-			ui.alertCh = alert()
+		if ui.blinkt == nil {
+			ui.blinkt = NewBlinkt()
 		}
 	} else {
-		ui.disableAlert()
+		if ui.blinkt != nil {
+			ui.blinkt.Stop()
+			ui.blinkt = nil
+		}
 	}
 	ui.cl.Redraw()
 	termbox.Flush()
 }
-func (ui *UI) disableAlert() {
-	if ui.alertCh == nil {
-		return
-	}
-	ui.alertCh <- struct{}{}
-	<-ui.alertCh
-	ui.alertCh = nil
-}
 
 func (ui *UI) Close() {
-	ui.disableAlert()
+	if ui.blinkt != nil {
+		ui.blinkt.Stop()
+	}
 	termbox.Close()
 }
 
@@ -155,45 +151,4 @@ func (ui *UI) Run() {
 	for command := range ui.cl.Run() {
 		ui.HandleCommand(command)
 	}
-}
-
-func alert() chan struct{} {
-	ch := make(chan struct{})
-	go func() {
-		brightness := 0.5
-		bl := blinkt.NewBlinkt(brightness)
-		bl.Setup()
-		r := 150
-		g := 0
-		b := 0
-	outerloop:
-		for {
-			for pixel := 0; pixel < 8; pixel++ {
-				select {
-				case <-ch:
-					break outerloop
-				default:
-				}
-				bl.Clear()
-				bl.SetPixel(pixel, r, g, b)
-				bl.Show()
-				blinkt.Delay(100)
-			}
-			for pixel := 7; pixel > 0; pixel-- {
-				select {
-				case <-ch:
-					break outerloop
-				default:
-				}
-				bl.Clear()
-				bl.SetPixel(pixel, r, g, b)
-				bl.Show()
-				blinkt.Delay(100)
-			}
-		}
-		bl.Clear()
-		bl.Show()
-		close(ch)
-	}()
-	return ch
 }
