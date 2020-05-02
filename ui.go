@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"regexp"
 	"strconv"
@@ -15,6 +16,7 @@ type UI struct {
 	Scheduler *Scheduler
 	todos     []Todo
 	blinkt    *Blinkt
+	cancelErr func()
 }
 
 func NewUI(scheduler *Scheduler) *UI {
@@ -33,6 +35,33 @@ func NewUI(scheduler *Scheduler) *UI {
 		}
 	}()
 	return &ui
+}
+
+// showErr displays error message to user.
+func (ui *UI) showErr(err error) {
+	if ui.cancelErr != nil {
+		ui.cancelErr()
+	}
+	_, h := termbox.Size()
+	ui.print(0, h-2, err.Error())
+	termbox.Flush()
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		select {
+		case <-time.After(time.Second * 5):
+			ui.clearErr()
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+	ui.cancelErr = cancel
+}
+
+// clearErr hides error message.
+func (ui *UI) clearErr() {
+	w, h := termbox.Size()
+	fill(0, h-2, w, 1, termbox.Cell{Ch: ' '})
+	termbox.Flush()
 }
 
 func (ui *UI) print(x, y int, text string) {
@@ -108,41 +137,47 @@ func (ui *UI) parseTime(input []byte) (time.Time, error) {
 	return time.Time{}, errInvalidTime
 }
 
-// TODO display error to user instead panicking
 func (ui *UI) HandleCommand(tokens []string) {
+	ui.clearErr()
 	switch tokens[0] {
 	case "add":
 		if len(tokens) < 3 {
-			panic("add: not enough arguments")
+			ui.showErr(errors.New("not enough arguments"))
+			return
 		}
+		var trigger Trigger
 		t, err := ui.parseTime([]byte(tokens[1]))
 		if err != nil {
-			trigger, err := NewTrigger(
+			trigger, err = NewTrigger(
 				tokens[2],
 				tokens[1],
 				time.Now(),
 				-1, // trigger indefinitely.
 			)
 			if err != nil {
-				panic(err)
+				ui.showErr(err)
+				return
 			}
-			ui.Scheduler.AddTriggerCh <- trigger
-			return
-		}
-		trigger, err := NewTrigger(
-			tokens[2],
-			"*/1 * * * * *",
-			t,
-			1, // one-time trigger.
-		)
-		if err != nil {
-			panic(err)
+		} else {
+			trigger, err = NewTrigger(
+				tokens[2],
+				"*/1 * * * * *",
+				t,
+				1, // one-time trigger.
+			)
+			if err != nil {
+				ui.showErr(err)
+				return
+			}
 		}
 		ui.Scheduler.AddTriggerCh <- trigger
 	case "done":
 		if len(ui.todos) > 0 {
 			ui.Scheduler.DelTodoCh <- ui.todos[0].ID
 		}
+	default:
+		err := errors.New("unknown command: " + tokens[0])
+		ui.showErr(err)
 	}
 }
 

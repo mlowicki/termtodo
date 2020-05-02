@@ -13,11 +13,13 @@ import (
 	cron "github.com/robfig/cron/v3"
 )
 
+// Todo represents something to accomplish.
 type Todo struct {
 	Name string
 	ID   string
 }
 
+// Trigger defines when to create a Todo.
 type Trigger struct {
 	Name  string
 	Cron  string
@@ -32,7 +34,7 @@ func NewTrigger(name, cron string, after time.Time, count int) (Trigger, error) 
 		After: after,
 		Count: count,
 	}
-	_, err := t.Schedule()
+	_, err := t.Schedule() // validate schedule
 	return t, err
 }
 
