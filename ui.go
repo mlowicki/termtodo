@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"time"
@@ -75,7 +76,7 @@ func (ui *UI) print(x, y int, text string) {
 func (ui *UI) Redraw() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
 	for i, todo := range ui.todos {
-		ui.print(0, i, todo.Name)
+		ui.print(0, i, fmt.Sprintf("%d. %s", i+1, todo.Name))
 	}
 	if len(ui.todos) > 0 {
 		if ui.blinkt == nil {
@@ -172,9 +173,21 @@ func (ui *UI) HandleCommand(tokens []string) {
 		}
 		ui.Scheduler.AddTriggerCh <- trigger
 	case "done":
-		if len(ui.todos) > 0 {
-			ui.Scheduler.DelTodoCh <- ui.todos[0].ID
+		idx := 1
+		if len(tokens) > 1 {
+			var err error
+			idx, err = strconv.Atoi(tokens[1])
+			if err != nil {
+				ui.showErr(fmt.Errorf("invalid index: %w", err))
+				return
+			}
 		}
+		if idx < 1 || idx > len(ui.todos) {
+			err := errors.New("index out of range")
+			ui.showErr(err)
+			return
+		}
+		ui.Scheduler.DelTodoCh <- ui.todos[idx-1].ID
 	default:
 		err := errors.New("unknown command: " + tokens[0])
 		ui.showErr(err)
