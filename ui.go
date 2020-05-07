@@ -138,6 +138,17 @@ func (ui *UI) parseTime(input []byte) (time.Time, error) {
 	return time.Time{}, errInvalidTime
 }
 
+func (ui *UI) getIdx(token string) (int, error) {
+	idx, err := strconv.Atoi(token)
+	if err != nil {
+		return -1, fmt.Errorf("invalid index: %w", err)
+	}
+	if idx < 1 || idx > len(ui.todos) {
+		return -1, errors.New("index out of range")
+	}
+	return idx, nil
+}
+
 func (ui *UI) HandleCommand(tokens []string) {
 	ui.clearErr()
 	switch tokens[0] {
@@ -176,18 +187,45 @@ func (ui *UI) HandleCommand(tokens []string) {
 		idx := 1
 		if len(tokens) > 1 {
 			var err error
-			idx, err = strconv.Atoi(tokens[1])
+			idx, err = ui.getIdx(tokens[1])
 			if err != nil {
-				ui.showErr(fmt.Errorf("invalid index: %w", err))
+				ui.showErr(err)
 				return
 			}
 		}
-		if idx < 1 || idx > len(ui.todos) {
-			err := errors.New("index out of range")
+		ui.Scheduler.DelTodoCh <- ui.todos[idx-1].ID
+	case "snooze":
+		if len(tokens) < 2 {
+			ui.showErr(errors.New("not enough arguments"))
+			return
+		}
+		t, err := ui.parseTime([]byte(tokens[1]))
+		if err != nil {
 			ui.showErr(err)
 			return
 		}
-		ui.Scheduler.DelTodoCh <- ui.todos[idx-1].ID
+		idx := 1
+		if len(tokens) > 2 {
+			var err error
+			idx, err = ui.getIdx(tokens[2])
+			if err != nil {
+				ui.showErr(err)
+				return
+			}
+		}
+		todo := ui.todos[idx-1]
+		trigger, err := NewTrigger(
+			todo.Name,
+			"*/1 * * * * *",
+			t,
+			1, // one-time trigger.
+		)
+		if err != nil {
+			ui.showErr(err)
+			return
+		}
+		ui.Scheduler.DelTodoCh <- todo.ID
+		ui.Scheduler.AddTriggerCh <- trigger
 	default:
 		err := errors.New("unknown command: " + tokens[0])
 		ui.showErr(err)
