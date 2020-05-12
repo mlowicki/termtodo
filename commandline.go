@@ -146,12 +146,12 @@ func (eb *CommandLine) Redraw() {
 	termbox.SetCursor(1+eb.CursorX(), h-1)
 }
 
-func (cl *CommandLine) Run() <-chan []string {
+func (cl *CommandLine) Run(events <-chan termbox.Event) <-chan []string {
 	ch := make(chan []string)
 	go func() {
 	mainloop:
 		for {
-			switch ev := termbox.PollEvent(); ev.Type {
+			switch ev := <-events; ev.Type {
 			case termbox.EventKey:
 				switch ev.Key {
 				case termbox.KeyEsc:

@@ -7,9 +7,12 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/nsf/termbox-go"
 	cron "github.com/robfig/cron/v3"
 )
 
@@ -207,5 +210,19 @@ func main() {
 	scheduler := NewScheduler(db)
 	ui := NewUI(scheduler)
 	defer ui.Close()
+	go func() {
+		signals := make(chan os.Signal, 1)
+		signal.Notify(signals, syscall.SIGCONT)
+		for {
+			select {
+			case <-signals:
+				err := termbox.Init()
+				if err != nil {
+					panic(err)
+				}
+				ui.Redraw()
+			}
+		}
+	}()
 	ui.Run()
 }

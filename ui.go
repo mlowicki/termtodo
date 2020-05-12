@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/mattn/go-runewidth"
@@ -17,6 +18,7 @@ type UI struct {
 	Scheduler *Scheduler
 	todos     []Todo
 	blinkt    *Blinkt
+	err       error
 	cancelErr func()
 }
 
@@ -43,8 +45,6 @@ func (ui *UI) showErr(err error) {
 	if ui.cancelErr != nil {
 		ui.cancelErr()
 	}
-	_, h := termbox.Size()
-	ui.print(0, h-2, err.Error())
 	termbox.Flush()
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
@@ -56,12 +56,15 @@ func (ui *UI) showErr(err error) {
 		}
 	}()
 	ui.cancelErr = cancel
+	ui.err = err
+	ui.Redraw()
 }
 
 // clearErr hides error message.
 func (ui *UI) clearErr() {
 	w, h := termbox.Size()
 	fill(0, h-2, w, 1, termbox.Cell{Ch: ' '})
+	ui.err = nil
 	termbox.Flush()
 }
 
@@ -88,6 +91,10 @@ func (ui *UI) Redraw() {
 			ui.blinkt = nil
 		}
 	}
+	if ui.err != nil {
+		_, h := termbox.Size()
+		ui.print(0, h-2, ui.err.Error())
+	}
 	ui.cl.Redraw()
 	termbox.Flush()
 }
@@ -95,6 +102,7 @@ func (ui *UI) Redraw() {
 func (ui *UI) Close() {
 	if ui.blinkt != nil {
 		ui.blinkt.Stop()
+		ui.blinkt = nil
 	}
 	termbox.Close()
 }
@@ -234,7 +242,28 @@ func (ui *UI) HandleCommand(tokens []string) {
 
 func (ui *UI) Run() {
 	ui.Redraw()
-	for command := range ui.cl.Run() {
+	eventsCh := make(chan termbox.Event)
+
+	go func() {
+		for {
+			switch ev := termbox.PollEvent(); ev.Type {
+			case termbox.EventKey:
+				switch ev.Key {
+				case termbox.KeyCtrlZ:
+					ui.Close()
+					syscall.Kill(syscall.Getpid(), syscall.SIGSTOP)
+				default:
+					eventsCh <- ev
+				}
+			case termbox.EventError:
+				panic(ev.Err)
+			case termbox.EventResize:
+				ui.Redraw()
+			}
+		}
+	}()
+
+	for command := range ui.cl.Run(eventsCh) {
 		ui.HandleCommand(command)
 	}
 }
