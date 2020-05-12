@@ -211,17 +211,16 @@ func main() {
 	ui := NewUI(scheduler)
 	defer ui.Close()
 	go func() {
-		signals := make(chan os.Signal, 1)
-		signal.Notify(signals, syscall.SIGCONT)
+		signalsCh := make(chan os.Signal, 1)
+		signal.Notify(signalsCh, syscall.SIGCONT)
 		for {
-			select {
-			case <-signals:
-				err := termbox.Init()
-				if err != nil {
-					panic(err)
-				}
-				ui.Redraw()
+			<-signalsCh
+			ui.Close()
+			err = termbox.Init()
+			if err != nil {
+				panic(err)
 			}
+			ui.Redraw()
 		}
 	}()
 	ui.Run()
