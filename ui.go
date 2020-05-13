@@ -243,7 +243,6 @@ func (ui *UI) HandleCommand(tokens []string) {
 func (ui *UI) Run() {
 	ui.Redraw()
 	eventsCh := make(chan termbox.Event)
-
 	go func() {
 		for {
 			switch ev := termbox.PollEvent(); ev.Type {
@@ -261,7 +260,6 @@ func (ui *UI) Run() {
 			}
 		}
 	}()
-
 	for command := range ui.cl.Run(eventsCh) {
 		ui.HandleCommand(command)
 	}
