@@ -11,6 +11,18 @@ Minimalistic todo app for your terminal.
 * Efficient command-line interface 
 * All data stored locally
 
+## Installation
+
+### From source
+1. Install [Go](https://golang.org/doc/install)
+2.
+```
+$ git clone git@github.com:mlowicki/termtodo.git
+$ cd termtodo
+$ go build
+$ ./termtodo
+```
+
 ## Commands
 
 ### a(dd)
@@ -64,3 +76,6 @@ Examples:
 :q
 :quit
 ```
+
+## Time formats
+...
