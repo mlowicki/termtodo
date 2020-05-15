@@ -240,16 +240,23 @@ func main() {
 	ui := NewUI(scheduler)
 	defer ui.Close()
 	go func() {
-		ch := make(chan os.Signal, 1)
-		signal.Notify(ch, syscall.SIGCONT)
+		contCh := make(chan os.Signal, 1)
+		signal.Notify(contCh, syscall.SIGCONT)
+		termCh := make(chan os.Signal, 1)
+		signal.Notify(termCh, syscall.SIGTERM)
 		for {
-			<-ch
-			ui.Close()
-			err = termbox.Init()
-			if err != nil {
-				panic(err)
+			select {
+			case <-contCh:
+				ui.Close()
+				err = termbox.Init()
+				if err != nil {
+					panic(err)
+				}
+				ui.Redraw()
+			case <-termCh:
+				ui.Close()
+				os.Exit(0)
 			}
-			ui.Redraw()
 		}
 	}()
 	ui.Run()
