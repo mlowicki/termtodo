@@ -195,7 +195,7 @@ func (ui *UI) getIdx(token string) (int, error) {
 func (ui *UI) HandleCommand(tokens []string) {
 	ui.clearErr()
 	switch tokens[0] {
-	case "add":
+	case "a", "add":
 		if len(tokens) < 3 {
 			ui.showErr(errors.New("not enough arguments"))
 			return
@@ -226,7 +226,7 @@ func (ui *UI) HandleCommand(tokens []string) {
 			}
 		}
 		ui.Scheduler.AddTriggerCh <- trigger
-	case "rm":
+	case "r", "rm":
 		idx := 1
 		if len(tokens) > 1 {
 			var err error
@@ -244,7 +244,7 @@ func (ui *UI) HandleCommand(tokens []string) {
 		default:
 			panic("not supported view")
 		}
-	case "snooze":
+	case "s", "snooze":
 		if ui.view != TODOS {
 			ui.showErr(errors.New("invalid command"))
 			return
@@ -280,10 +280,10 @@ func (ui *UI) HandleCommand(tokens []string) {
 		}
 		ui.Scheduler.DelTodoCh <- todo.ID
 		ui.Scheduler.AddTriggerCh <- trigger
-	case "triggers":
+	case "tr", "triggers":
 		ui.view = TRIGGERS
 		ui.Redraw()
-	case "todos":
+	case "to", "todos":
 		ui.view = TODOS
 		ui.Redraw()
 	default:

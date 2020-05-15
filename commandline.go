@@ -178,7 +178,7 @@ func (cl *CommandLine) Run(events <-chan termbox.Event) <-chan []string {
 					if len(tokens) == 0 {
 						break
 					}
-					if tokens[0] == "exit" {
+					if tokens[0] == "q" || tokens[0] == "quit" {
 						close(ch)
 						break mainloop
 					}
