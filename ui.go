@@ -13,13 +13,22 @@ import (
 	"github.com/nsf/termbox-go"
 )
 
+type View int
+
+const (
+	TODOS View = iota
+	TRIGGERS
+)
+
 type UI struct {
 	cl        *CommandLine
 	Scheduler *Scheduler
 	todos     []Todo
+	triggers  []Trigger
 	blinkt    *Blinkt
 	err       error
 	cancelErr func()
+	view      View
 }
 
 func NewUI(scheduler *Scheduler) *UI {
@@ -27,12 +36,15 @@ func NewUI(scheduler *Scheduler) *UI {
 	if err != nil {
 		panic(err) // TODO more desciptive message
 	}
-	ui := UI{cl: &CommandLine{}, Scheduler: scheduler}
+	ui := UI{cl: &CommandLine{}, Scheduler: scheduler, view: TODOS}
 	go func() {
 		for {
 			select {
 			case todos := <-scheduler.TodosCh:
 				ui.todos = todos
+				ui.Redraw()
+			case triggers := <-scheduler.TriggersCh:
+				ui.triggers = triggers
 				ui.Redraw()
 			}
 		}
@@ -78,9 +90,28 @@ func (ui *UI) print(x, y int, text string) {
 
 func (ui *UI) Redraw() {
 	termbox.Clear(termbox.ColorDefault, termbox.ColorDefault)
-	for i, todo := range ui.todos {
-		ui.print(0, i, fmt.Sprintf("%d. %s", i+1, todo.Name))
+	switch ui.view {
+	case TODOS:
+		for i, todo := range ui.todos {
+			ui.print(0, i, fmt.Sprintf("%*d %s", -len(strconv.Itoa(len(ui.todos))), i+1, todo.Name))
+		}
+	case TRIGGERS:
+		maxName := 0
+		for _, trigger := range ui.triggers {
+			w := len(trigger.Name)
+			if w > maxName {
+				maxName = w
+			}
+		}
+		for i, trigger := range ui.triggers {
+			when := trigger.Cron
+			if trigger.Count != -1 {
+				when = trigger.After.Format("Mon Jan 2 15:04:05")
+			}
+			ui.print(0, i, fmt.Sprintf("%*d %*s %s", -len(strconv.Itoa(len(ui.triggers))), i+1, -maxName, trigger.Name, when))
+		}
 	}
+
 	if len(ui.todos) > 0 {
 		if ui.blinkt == nil {
 			ui.blinkt = NewBlinkt()
@@ -234,6 +265,12 @@ func (ui *UI) HandleCommand(tokens []string) {
 		}
 		ui.Scheduler.DelTodoCh <- todo.ID
 		ui.Scheduler.AddTriggerCh <- trigger
+	case "triggers":
+		ui.view = TRIGGERS
+		ui.Redraw()
+	case "todos":
+		ui.view = TODOS
+		ui.Redraw()
 	default:
 		err := errors.New("unknown command: " + tokens[0])
 		ui.showErr(err)

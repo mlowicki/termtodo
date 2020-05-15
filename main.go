@@ -121,6 +121,7 @@ func (db *DB) Read() error {
 
 type Scheduler struct {
 	TodosCh      chan []Todo
+	TriggersCh   chan []Trigger
 	AddTriggerCh chan Trigger
 	DelTodoCh    chan string
 	timer        *time.Timer
@@ -128,12 +129,10 @@ type Scheduler struct {
 }
 
 func (sch *Scheduler) checkTriggers() {
-	added := false
 	triggers := make([]Trigger, 0)
 	for _, trigger := range sch.db.Triggers {
 		if todo := trigger.Check(); todo != nil {
 			sch.db.Todos[(*todo).ID] = *todo
-			added = true
 		}
 		if !trigger.Next().IsZero() {
 			triggers = append(triggers, trigger)
@@ -143,9 +142,6 @@ func (sch *Scheduler) checkTriggers() {
 	err := sch.db.Write()
 	if err != nil {
 		panic(err)
-	}
-	if added {
-		sch.sendTodos()
 	}
 }
 
@@ -157,9 +153,18 @@ func (sch *Scheduler) sendTodos() {
 	sch.TodosCh <- todos
 }
 
+func (sch *Scheduler) sendTriggers() {
+	triggers := make([]Trigger, 0, len(sch.db.Triggers))
+	for _, trigger := range sch.db.Triggers {
+		triggers = append(triggers, trigger)
+	}
+	sch.TriggersCh <- triggers
+}
+
 func NewScheduler(db *DB) *Scheduler {
 	sch := Scheduler{
 		TodosCh:      make(chan []Todo),
+		TriggersCh:   make(chan []Trigger),
 		AddTriggerCh: make(chan Trigger),
 		DelTodoCh:    make(chan string),
 		timer:        time.NewTimer(time.Millisecond),
@@ -167,8 +172,11 @@ func NewScheduler(db *DB) *Scheduler {
 	}
 	go func() {
 		sch.sendTodos()
+		sch.sendTriggers()
 		for {
 			timerExpired := false
+			triggersNum := len(db.Triggers)
+			todosNum := len(db.Todos)
 			select {
 			case id := <-sch.DelTodoCh:
 				delete(db.Todos, id)
@@ -176,7 +184,6 @@ func NewScheduler(db *DB) *Scheduler {
 				if err != nil {
 					panic(err)
 				}
-				sch.sendTodos()
 			case trigger := <-sch.AddTriggerCh:
 				db.Triggers = append(db.Triggers, trigger)
 				sch.checkTriggers()
@@ -184,6 +191,14 @@ func NewScheduler(db *DB) *Scheduler {
 				sch.checkTriggers()
 				timerExpired = true
 			}
+
+			if len(db.Todos) != todosNum {
+				sch.sendTodos()
+			}
+			if len(db.Triggers) != triggersNum {
+				sch.sendTriggers()
+			}
+
 			nextCheck := time.Now().Add(time.Hour * 24 * 7)
 			for _, trigger := range sch.db.Triggers {
 				n := trigger.Next()
