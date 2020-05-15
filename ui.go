@@ -182,7 +182,11 @@ func (ui *UI) getIdx(token string) (int, error) {
 	if err != nil {
 		return -1, fmt.Errorf("invalid index: %w", err)
 	}
-	if idx < 1 || idx > len(ui.todos) {
+	length := len(ui.todos)
+	if ui.view == TRIGGERS {
+		length = len(ui.triggers)
+	}
+	if idx < 1 || idx > length {
 		return -1, errors.New("index out of range")
 	}
 	return idx, nil
@@ -222,7 +226,7 @@ func (ui *UI) HandleCommand(tokens []string) {
 			}
 		}
 		ui.Scheduler.AddTriggerCh <- trigger
-	case "done":
+	case "rm":
 		idx := 1
 		if len(tokens) > 1 {
 			var err error
@@ -232,8 +236,19 @@ func (ui *UI) HandleCommand(tokens []string) {
 				return
 			}
 		}
-		ui.Scheduler.DelTodoCh <- ui.todos[idx-1].ID
+		switch ui.view {
+		case TODOS:
+			ui.Scheduler.DelTodoCh <- ui.todos[idx-1].ID
+		case TRIGGERS:
+			ui.Scheduler.DelTriggerCh <- ui.triggers[idx-1].ID
+		default:
+			panic("not supported view")
+		}
 	case "snooze":
+		if ui.view != TODOS {
+			ui.showErr(errors.New("invalid command"))
+			return
+		}
 		if len(tokens) < 2 {
 			ui.showErr(errors.New("not enough arguments"))
 			return

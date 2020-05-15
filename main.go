@@ -28,6 +28,7 @@ type Trigger struct {
 	Cron  string
 	After time.Time
 	Count int
+	ID    string
 }
 
 func NewTrigger(name, cron string, after time.Time, count int) (Trigger, error) {
@@ -36,6 +37,7 @@ func NewTrigger(name, cron string, after time.Time, count int) (Trigger, error) 
 		Cron:  cron,
 		After: after,
 		Count: count,
+		ID:    uuid.New().String(),
 	}
 	_, err := t.Schedule() // validate schedule
 	return t, err
@@ -76,13 +78,17 @@ func (t *Trigger) Check() *Todo {
 // A DB read / writes scheduler's data from / to disk.
 type DB struct {
 	Todos    map[string]Todo
-	Triggers []Trigger
+	Triggers map[string]Trigger
 	filename string `json:"-"`
 }
 
 // NewDB returns a DB located in filename.
 func NewDB(filename string) (*DB, error) {
-	db := DB{filename: filename, Todos: make(map[string]Todo)}
+	db := DB{
+		filename: filename,
+		Todos:    make(map[string]Todo),
+		Triggers: make(map[string]Trigger),
+	}
 	err := db.Read()
 	if err != nil {
 		return nil, err
@@ -123,19 +129,20 @@ type Scheduler struct {
 	TodosCh      chan []Todo
 	TriggersCh   chan []Trigger
 	AddTriggerCh chan Trigger
+	DelTriggerCh chan string
 	DelTodoCh    chan string
 	timer        *time.Timer
 	db           *DB
 }
 
 func (sch *Scheduler) checkTriggers() {
-	triggers := make([]Trigger, 0)
+	triggers := make(map[string]Trigger)
 	for _, trigger := range sch.db.Triggers {
 		if todo := trigger.Check(); todo != nil {
 			sch.db.Todos[(*todo).ID] = *todo
 		}
 		if !trigger.Next().IsZero() {
-			triggers = append(triggers, trigger)
+			triggers[trigger.ID] = trigger
 		}
 	}
 	sch.db.Triggers = triggers
@@ -166,6 +173,7 @@ func NewScheduler(db *DB) *Scheduler {
 		TodosCh:      make(chan []Todo),
 		TriggersCh:   make(chan []Trigger),
 		AddTriggerCh: make(chan Trigger),
+		DelTriggerCh: make(chan string),
 		DelTodoCh:    make(chan string),
 		timer:        time.NewTimer(time.Millisecond),
 		db:           db,
@@ -185,8 +193,14 @@ func NewScheduler(db *DB) *Scheduler {
 					panic(err)
 				}
 			case trigger := <-sch.AddTriggerCh:
-				db.Triggers = append(db.Triggers, trigger)
+				db.Triggers[trigger.ID] = trigger
 				sch.checkTriggers()
+			case id := <-sch.DelTriggerCh:
+				delete(db.Triggers, id)
+				err := sch.db.Write()
+				if err != nil {
+					panic(err)
+				}
 			case <-sch.timer.C:
 				sch.checkTriggers()
 				timerExpired = true
