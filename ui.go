@@ -177,19 +177,40 @@ func (ui *UI) parseTime(input []byte) (time.Time, error) {
 	return time.Time{}, errInvalidTime
 }
 
-func (ui *UI) getIdx(token string) (int, error) {
+func (ui *UI) getIdxs(token string) ([]int, error) {
+	if token == "*" {
+		length := 0
+		switch ui.view {
+		case TODOS:
+			length = len(ui.todos)
+		case TRIGGERS:
+			length = len(ui.triggers)
+		default:
+			panic("view not supported")
+		}
+		idxs := make([]int, length, length)
+		for i := 0; i < length; i++ {
+			idxs[i] = i
+		}
+		return idxs, nil
+	}
 	idx, err := strconv.Atoi(token)
 	if err != nil {
-		return -1, fmt.Errorf("invalid index: %w", err)
+		return nil, fmt.Errorf("invalid index: %w", err)
 	}
-	length := len(ui.todos)
-	if ui.view == TRIGGERS {
+	length := 0
+	switch ui.view {
+	case TODOS:
+		length = len(ui.todos)
+	case TRIGGERS:
 		length = len(ui.triggers)
+	default:
+		panic("view not supported")
 	}
 	if idx < 1 || idx > length {
-		return -1, errors.New("index out of range")
+		return nil, errors.New("index out of range")
 	}
-	return idx, nil
+	return []int{idx - 1}, nil
 }
 
 func (ui *UI) HandleCommand(tokens []string) {
@@ -225,24 +246,31 @@ func (ui *UI) HandleCommand(tokens []string) {
 				return
 			}
 		}
-		ui.Scheduler.AddTriggerCh <- trigger
+		ui.Scheduler.AddTriggersCh <- []Trigger{trigger}
 	case "r", "rm":
-		idx := 1
-		if len(tokens) > 1 {
-			var err error
-			idx, err = ui.getIdx(tokens[1])
-			if err != nil {
-				ui.showErr(err)
-				return
-			}
+		if len(tokens) == 1 {
+			tokens = append(tokens, "1")
+		}
+		idxs, err := ui.getIdxs(tokens[1])
+		if err != nil {
+			ui.showErr(err)
+			return
 		}
 		switch ui.view {
 		case TODOS:
-			ui.Scheduler.DelTodoCh <- ui.todos[idx-1].ID
+			ids := make([]string, 0, len(idxs))
+			for _, idx := range idxs {
+				ids = append(ids, ui.todos[idx].ID)
+			}
+			ui.Scheduler.DelTodosCh <- ids
 		case TRIGGERS:
-			ui.Scheduler.DelTriggerCh <- ui.triggers[idx-1].ID
+			ids := make([]string, 0, len(idxs))
+			for _, idx := range idxs {
+				ids = append(ids, ui.triggers[idx].ID)
+			}
+			ui.Scheduler.DelTriggersCh <- ids
 		default:
-			panic("not supported view")
+			panic("view not supported")
 		}
 	case "s", "snooze":
 		if ui.view != TODOS {
@@ -258,28 +286,33 @@ func (ui *UI) HandleCommand(tokens []string) {
 			ui.showErr(err)
 			return
 		}
-		idx := 1
-		if len(tokens) > 2 {
-			var err error
-			idx, err = ui.getIdx(tokens[2])
-			if err != nil {
-				ui.showErr(err)
-				return
-			}
+		if len(tokens) == 2 {
+			tokens = append(tokens, "1")
 		}
-		todo := ui.todos[idx-1]
-		trigger, err := NewTrigger(
-			todo.Name,
-			"*/1 * * * * *",
-			t,
-			1, // one-time trigger.
-		)
+		idxs, err := ui.getIdxs(tokens[2])
 		if err != nil {
 			ui.showErr(err)
 			return
 		}
-		ui.Scheduler.DelTodoCh <- todo.ID
-		ui.Scheduler.AddTriggerCh <- trigger
+		todos := make([]string, 0, len(idxs))
+		triggers := make([]Trigger, 0, len(idxs))
+		for _, idx := range idxs {
+			todo := ui.todos[idx]
+			trigger, err := NewTrigger(
+				todo.Name,
+				"*/1 * * * * *",
+				t,
+				1, // one-time trigger.
+			)
+			if err != nil {
+				ui.showErr(err)
+				return
+			}
+			todos = append(todos, todo.ID)
+			triggers = append(triggers, trigger)
+		}
+		ui.Scheduler.DelTodosCh <- todos
+		ui.Scheduler.AddTriggersCh <- triggers
 	case "tr", "triggers":
 		ui.view = TRIGGERS
 		ui.Redraw()

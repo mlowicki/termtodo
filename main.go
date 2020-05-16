@@ -126,13 +126,13 @@ func (db *DB) Read() error {
 }
 
 type Scheduler struct {
-	TodosCh      chan []Todo
-	TriggersCh   chan []Trigger
-	AddTriggerCh chan Trigger
-	DelTriggerCh chan string
-	DelTodoCh    chan string
-	timer        *time.Timer
-	db           *DB
+	TodosCh       chan []Todo
+	TriggersCh    chan []Trigger
+	AddTriggersCh chan []Trigger
+	DelTriggersCh chan []string
+	DelTodosCh    chan []string
+	timer         *time.Timer
+	db            *DB
 }
 
 func (sch *Scheduler) checkTriggers() {
@@ -170,13 +170,13 @@ func (sch *Scheduler) sendTriggers() {
 
 func NewScheduler(db *DB) *Scheduler {
 	sch := Scheduler{
-		TodosCh:      make(chan []Todo),
-		TriggersCh:   make(chan []Trigger),
-		AddTriggerCh: make(chan Trigger),
-		DelTriggerCh: make(chan string),
-		DelTodoCh:    make(chan string),
-		timer:        time.NewTimer(time.Millisecond),
-		db:           db,
+		TodosCh:       make(chan []Todo),
+		TriggersCh:    make(chan []Trigger),
+		AddTriggersCh: make(chan []Trigger),
+		DelTriggersCh: make(chan []string),
+		DelTodosCh:    make(chan []string),
+		timer:         time.NewTimer(time.Millisecond),
+		db:            db,
 	}
 	go func() {
 		sch.sendTodos()
@@ -186,17 +186,24 @@ func NewScheduler(db *DB) *Scheduler {
 			triggersNum := len(db.Triggers)
 			todosNum := len(db.Todos)
 			select {
-			case id := <-sch.DelTodoCh:
-				delete(db.Todos, id)
+			case ids := <-sch.DelTodosCh:
+				for _, id := range ids {
+					delete(db.Todos, id)
+				}
 				err := sch.db.Write()
 				if err != nil {
 					panic(err)
 				}
-			case trigger := <-sch.AddTriggerCh:
-				db.Triggers[trigger.ID] = trigger
+			case triggers := <-sch.AddTriggersCh:
+				for _, trigger := range triggers {
+
+					db.Triggers[trigger.ID] = trigger
+				}
 				sch.checkTriggers()
-			case id := <-sch.DelTriggerCh:
-				delete(db.Triggers, id)
+			case ids := <-sch.DelTriggersCh:
+				for _, id := range ids {
+					delete(db.Triggers, id)
+				}
 				err := sch.db.Write()
 				if err != nil {
 					panic(err)
