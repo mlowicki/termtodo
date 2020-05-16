@@ -149,14 +149,10 @@ func (eb *CommandLine) Redraw() {
 func (cl *CommandLine) Run(events <-chan termbox.Event) <-chan []string {
 	ch := make(chan []string)
 	go func() {
-	mainloop:
 		for {
 			switch ev := <-events; ev.Type {
 			case termbox.EventKey:
 				switch ev.Key {
-				case termbox.KeyEsc:
-					close(ch)
-					break mainloop
 				case termbox.KeyArrowLeft, termbox.KeyCtrlB:
 					cl.MoveCursorOneRuneBackward()
 				case termbox.KeyArrowRight, termbox.KeyCtrlF:
@@ -177,10 +173,6 @@ func (cl *CommandLine) Run(events <-chan termbox.Event) <-chan []string {
 					}
 					if len(tokens) == 0 {
 						break
-					}
-					if tokens[0] == "q" || tokens[0] == "quit" {
-						close(ch)
-						break mainloop
 					}
 					ch <- tokens
 					cl.DeleteAll()

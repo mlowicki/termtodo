@@ -335,7 +335,7 @@ func (ui *UI) Run() {
 				switch ev.Key {
 				case termbox.KeyCtrlZ:
 					syscall.Kill(syscall.Getpid(), syscall.SIGSTOP)
-				case termbox.KeyCtrlC:
+				case termbox.KeyEsc, termbox.KeyCtrlC:
 					syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 				default:
 					eventsCh <- ev
@@ -347,7 +347,12 @@ func (ui *UI) Run() {
 			}
 		}
 	}()
-	for command := range ui.cl.Run(eventsCh) {
+	commandsCh := ui.cl.Run(eventsCh)
+	for {
+		command := <-commandsCh
+		if command[0] == "q" || command[0] == "quit" {
+			break
+		}
 		ui.HandleCommand(command)
 	}
 }
