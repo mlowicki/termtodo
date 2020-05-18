@@ -68,13 +68,14 @@ Examples:
 :tr
 :triggers
 ```
-### q(uit)
-Quit program. \<ESC\> does the same.
+### q(uit), <ctrl-c>
+Quit program.
 
 Examples:
 ```
 :q
 :quit
+:<ctrl-c>
 ```
 
 ## Time formats

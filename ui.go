@@ -335,7 +335,7 @@ func (ui *UI) Run() {
 				switch ev.Key {
 				case termbox.KeyCtrlZ:
 					syscall.Kill(syscall.Getpid(), syscall.SIGSTOP)
-				case termbox.KeyEsc, termbox.KeyCtrlC:
+				case termbox.KeyCtrlC:
 					syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
 				default:
 					eventsCh <- ev
