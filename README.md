@@ -159,11 +159,11 @@ Examples:
 
 ### Cron
 
-Allows to great recurring triggers. It's implemented by:
+Allows to created recurring triggers. It's implemented by:
 ```
 cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 ```
-see https://godoc.org/github.com/robfig/cron#hdr-Alternative_Formats for more information.
+(see https://godoc.org/github.com/robfig/cron#hdr-Alternative_Formats for more details).
 
 Every 10 seconds:
 ```
