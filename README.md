@@ -141,7 +141,7 @@ Examples:
 \+(\d+)[smhd]
 ```
 
-Where `smhd` stands for seconds, minutes, hours and days, respectively:
+Where `smhd` stands for seconds, minutes, hours and days, respectively.
 
 Examples:
 
