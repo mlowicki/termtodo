@@ -165,10 +165,17 @@ cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.M
 ```
 (see https://godoc.org/github.com/robfig/cron#hdr-Alternative_Formats for more details)
 
+At 10:00 every weekday:
+```
+0 10 * * 0-5
+```
+
 Every 10 seconds:
 ```
 */10 * * * * *
 ```
+(adding seconds is extension so it requires 6th field - compare it with previous example)
+
 
 Every hour:
 ```
