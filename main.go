@@ -43,7 +43,7 @@ func NewTrigger(name, cron string, after time.Time, count int) (Trigger, error) 
 }
 
 func (t *Trigger) Schedule() (cron.Schedule, error) {
-	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	parser := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 	sched, err := parser.Parse(t.Cron)
 	if err != nil {
 		return nil, fmt.Errorf("invalid schedule: %w", err)
