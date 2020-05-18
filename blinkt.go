@@ -1,6 +1,26 @@
 package main
 
-import blinkt "github.com/alexellis/blinkt_go"
+import (
+	"time"
+
+	blinkt "github.com/alexellis/blinkt_go"
+)
+
+// sign returns 1 if n is non-negative, -1 otherwise.
+func sign(n int) int {
+	if n < 0 {
+		return -1
+	}
+	return 1
+}
+
+// abs returns the absolute value of n.
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
 
 // Blinkt creates visual notification using Pimoroni Blinkt!.
 type Blinkt struct {
@@ -13,6 +33,16 @@ func (b *Blinkt) Stop() {
 	<-b.ch
 }
 
+// seq creates a sequence of numbers from min to max inclusive.
+func seq(min, max int) []int {
+	res := make([]int, abs(max-min)+1)
+	s := sign(max - min)
+	for i := range res {
+		res[i] = min + i*s
+	}
+	return res
+}
+
 // NewBlinkt returns active Blinkt notification.
 func NewBlinkt() *Blinkt {
 	ch := make(chan struct{})
@@ -20,32 +50,18 @@ func NewBlinkt() *Blinkt {
 		brightness := 0.5
 		bl := blinkt.NewBlinkt(brightness)
 		bl.Setup()
-		r := 150
-		g := 0
-		b := 0
+		r, g, b := 150, 0, 0
 	outerloop:
 		for {
-			for pixel := 0; pixel < 8; pixel++ {
-				select {
-				case <-ch:
-					break outerloop
-				default:
-				}
+			for _, pixel := range append(seq(0, 7), seq(6, 1)...) {
 				bl.Clear()
 				bl.SetPixel(pixel, r, g, b)
 				bl.Show()
-				blinkt.Delay(100)
-			}
-			for pixel := 7; pixel > 0; pixel-- {
 				select {
+				case <-time.After(100 * time.Millisecond):
 				case <-ch:
 					break outerloop
-				default:
 				}
-				bl.Clear()
-				bl.SetPixel(pixel, r, g, b)
-				bl.Show()
-				blinkt.Delay(100)
 			}
 		}
 		bl.Clear()
