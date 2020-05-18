@@ -28,8 +28,6 @@ $ ./termtodo
 ### a(dd)
 Create a trigger that adds todo either once or regularly.
 
-Examples:
-
 Call Mom in 10 minutes:
 ```
 :a +10m "call mom"
@@ -54,8 +52,6 @@ Deletes todo or trigger, depending on the active view. Accepts optional selector
 * If the selector is `*`, then all items will be removed.
 * Otherwise selector is interpreted as a number.
 
-Examples:
-
 Delete the first todo from the list (number 1):
 ```
 :r
@@ -76,9 +72,6 @@ Postpone todo. Accepts optional selector to specify the todo to re-schedule:
 * If the selector is missing, then the first item from the top will be erased.
 * If the selector is `*`, then all todos will be removed.
 * Otherwise selector is interpreted as a number.
-
-
-Examples:
 
 Snooze the first todo for 1h (trigger in 60 minutes):
 ```
@@ -111,7 +104,6 @@ See [Time formats](#time-formats) for a list of all supported formats. Snooze co
 ### to(dos)
 Show things to do (default view).
 
-Examples:
 ```
 :to
 :todos
@@ -119,7 +111,6 @@ Examples:
 ### tr(iggers)
 Show schedules for todos.
 
-Examples:
 ```
 :tr
 :triggers
@@ -127,7 +118,6 @@ Examples:
 ### q(uit) or \<ctrl-c\>
 Quit program.
 
-Examples:
 ```
 :q
 :quit
@@ -142,8 +132,6 @@ Examples:
 ```
 
 Where `smhd` stands for seconds, minutes, hours and days, respectively.
-
-Examples:
 
 In 10 seconds:
 ```
@@ -177,9 +165,7 @@ cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.M
 ```
 see https://godoc.org/github.com/robfig/cron#hdr-Alternative_Formats for more information.
 
-Examples:
-
-Eevery 10 seconds:
+Every 10 seconds:
 ```
 */10 * * * * *
 ```
