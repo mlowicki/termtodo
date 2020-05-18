@@ -44,6 +44,10 @@ Do your workout at 10:00 every weekday:
 ```
 :add "0 10 * * 0-5" workout
 ```
+
+
+See [Time formats](#time-formats) for a list of all supported formats.
+
 ### r(m)
 Deletes todo or trigger, depending on the active view. Accepts optional selector to specify the item to remove:
 * If the selector is missing, then the first item from the top will be erased.
@@ -100,6 +104,10 @@ Snooze all todos for 20 minutes:
 ```
 :s +20m *
 ```
+
+
+See [Time formats](#time-formats) for a list of all supported formats. Snooze command supports one-time triggers only, so it doesn't support cron format.
+
 ### to(dos)
 Show things to do (default view).
 
@@ -127,4 +135,57 @@ Examples:
 ```
 
 ## Time formats
-...
+
+### Relative time
+```
+\+(\d+)[smhd]
+```
+
+Where `smhd` stands for seconds, minutes, hours and days, respectively:
+
+Examples:
+
+In 10 seconds:
+```
++10s
+```
+
+In 4 days:
+```
++4d
+```
+
+### Absolute time
+
+At a specific time of the current day:
+```
+@\d{2}:\d{2}
+```
+
+Examples:
+```
+@10:00
+@23:15
+@9:10
+```
+
+### Cron
+
+Allows to great recurring triggers. It's implemented by:
+```
+cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+```
+see https://godoc.org/github.com/robfig/cron#hdr-Alternative_Formats for more information.
+
+Examples:
+
+Eevery 10 seconds:
+```
+*/10 * * * * *
+```
+
+Every hour:
+```
+@hourly
+@every 1h
+```
