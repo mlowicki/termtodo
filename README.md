@@ -34,16 +34,24 @@ Examples:
 :add "0 10 * * 0-5" workout
 ```
 ### r(m)
-Deletes todo or trigger, depending on the active view. Accepts optional number which specifies item to remove. If number is missing then first item from the top will be erased.
+Deletes todo or trigger, depending on the active view. Accepts optional selector to specify the item to remove:
+* If the selector is missing, then the first item from the top will be erased.
+* If the selector is `*`, then all items will be removed.
+* Otherwise selector is interpreted as a number.
 
 Examples:
 ```
 :r
 :r 4
 :rm 4
+:r *
 ```
 ### s(nooze)
-Postpone todo. Accepts optional number which specifies todo to re-schedule. If number is missing then first todo from the top will be snoozed.
+Postpone todo. Accepts optional selector to specify the todo to re-schedule:
+* If the selector is missing, then the first item from the top will be erased.
+* If the selector is `*`, then all todos will be removed.
+* Otherwise selector is interpreted as a number.
+
 
 Examples:
 ```
@@ -51,6 +59,7 @@ Examples:
 :s @11:00
 :s +1m 4
 :snooze +20m 2
+:s +20m *
 ```
 ### to(dos)
 Show things to do (default view).
