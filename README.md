@@ -5,7 +5,7 @@ Minimalistic todo app for your terminal.
 *Currently supports only Raspbian*.
 
 ## Features
-* One-time or recursive triggers (using cron syntax) defining when todo should be created
+* One-time or recurring triggers (using cron syntax) defining when todo should be created
 * Integration with [Blinkt!](https://learn.pimoroni.com/tutorial/sandyj/getting-started-with-blinkt) for notifications on Raspberry Pi
 * Easy to integrate with terminal multiplexers like tmux
 * Efficient command-line interface 
