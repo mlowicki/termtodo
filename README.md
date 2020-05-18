@@ -47,7 +47,7 @@ Do your workout at 10:00 every weekday:
 See [Time formats](#time-formats) for a list of all supported formats.
 
 ### r(m)
-Deletes todo or trigger, depending on the active view. Accepts optional selector to specify the item to remove:
+Delete todo or trigger, depending on the active view. Accepts optional selector to specify the item to remove:
 * If the selector is missing, then the first item from the top will be erased.
 * If the selector is `*`, then all items will be removed.
 * Otherwise selector is interpreted as a number.
@@ -159,7 +159,7 @@ Examples:
 
 ### Cron
 
-Creates recurring event. It's implemented by:
+Define recurring event. It's implemented by:
 ```
 cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 ```
