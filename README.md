@@ -174,8 +174,7 @@ Every 10 seconds:
 ```
 */10 * * * * *
 ```
-(adding seconds is extension so it requires 6th field - compare it with previous example)
-
+(adding seconds is an extension, so it requires an additional 6th field)
 
 Every hour:
 ```
