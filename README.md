@@ -26,6 +26,7 @@ $ ./termtodo
 ## Commands
 
 ### a(dd)
+Create a trigger that adds todo either once or regularly.
 
 Examples:
 
@@ -36,10 +37,10 @@ Call Mom in 10 minutes:
 
 Drink coffee at 9:00:
 ```
-:a @9:00 "morning coffee"
+:a @9:00 "coffee with Joe"
 ```
 
-Do your workout at 10:00 every week day:
+Do your workout at 10:00 every weekday:
 ```
 :add "0 10 * * 0-5" workout
 ```
@@ -51,7 +52,7 @@ Deletes todo or trigger, depending on the active view. Accepts optional selector
 
 Examples:
 
-Delete first todo from the list (number 1):
+Delete the first todo from the list (number 1):
 ```
 :r
 ```
@@ -75,7 +76,7 @@ Postpone todo. Accepts optional selector to specify the todo to re-schedule:
 
 Examples:
 
-Snooze first todo for 1h (trigger in 60 minutes):
+Snooze the first todo for 1h (trigger in 60 minutes):
 ```
 :s +1h
 ```
