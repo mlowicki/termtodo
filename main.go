@@ -16,8 +16,9 @@ import (
 
 // Todo represents something to accomplish.
 type Todo struct {
-	Name string
-	ID   string
+	Name      string
+	ID        string
+	CreatedAt time.Time
 }
 
 // Trigger defines when to create a Todo.
@@ -70,7 +71,7 @@ func (t *Trigger) Check() *Todo {
 	if t.Count != -1 {
 		t.Count--
 	}
-	return &Todo{Name: t.Name, ID: uuid.New().String()}
+	return &Todo{Name: t.Name, ID: uuid.New().String(), CreatedAt: time.Now()}
 }
 
 type Scheduler struct {

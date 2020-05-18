@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"syscall"
 	"time"
@@ -41,9 +42,11 @@ func NewUI(scheduler *Scheduler) *UI {
 		for {
 			select {
 			case todos := <-scheduler.TodosCh:
+				sort.SliceStable(todos, func(i, j int) bool { return todos[i].CreatedAt.Before(todos[j].CreatedAt) })
 				ui.todos = todos
 				ui.Redraw()
 			case triggers := <-scheduler.TriggersCh:
+				sort.SliceStable(triggers, func(i, j int) bool { return triggers[i].Name < triggers[j].Name })
 				ui.triggers = triggers
 				ui.Redraw()
 			}
