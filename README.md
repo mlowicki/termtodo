@@ -159,7 +159,7 @@ Examples:
 
 ### Cron
 
-Creates recurring events. It's implemented by:
+Creates recurring event. It's implemented by:
 ```
 cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 ```
