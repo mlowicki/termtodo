@@ -22,6 +22,16 @@ func abs(n int) int {
 	return n
 }
 
+// seq creates a sequence of numbers from min to max inclusive.
+func seq(min, max int) []int {
+	res := make([]int, abs(max-min)+1)
+	s := sign(max - min)
+	for i := range res {
+		res[i] = min + i*s
+	}
+	return res
+}
+
 // Blinkt creates visual notification using Pimoroni Blinkt!.
 type Blinkt struct {
 	ch chan struct{}
@@ -31,16 +41,6 @@ type Blinkt struct {
 func (b *Blinkt) Stop() {
 	b.ch <- struct{}{}
 	<-b.ch
-}
-
-// seq creates a sequence of numbers from min to max inclusive.
-func seq(min, max int) []int {
-	res := make([]int, abs(max-min)+1)
-	s := sign(max - min)
-	for i := range res {
-		res[i] = min + i*s
-	}
-	return res
 }
 
 // NewBlinkt returns active Blinkt notification.
