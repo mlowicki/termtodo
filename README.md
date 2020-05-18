@@ -77,7 +77,7 @@ Examples:
 :tr
 :triggers
 ```
-### q(uit), <ctrl-c>
+### q(uit) or \<ctrl-c\>
 Quit program.
 
 Examples:
