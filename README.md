@@ -2,8 +2,6 @@
 
 Minimalistic todo app for your terminal.
 
-*Currently supports only Raspbian*.
-
 ![terminal session](/session.gif)
 
 ## Features
@@ -13,7 +11,7 @@ Minimalistic todo app for your terminal.
 ![Blinkt! alert](/alert.gif)
 
 * Easy to integrate with terminal multiplexers like tmux
-* Efficient command-line interface 
+* Efficient command-line interface
 * All data stored locally
 
 ## Installation
@@ -24,7 +22,7 @@ Minimalistic todo app for your terminal.
 ```
 $ git clone git@github.com:mlowicki/termtodo.git
 $ cd termtodo
-$ go build
+$ go build -tags raspbian // pass this tag only on Raspbian
 $ ./termtodo
 ```
 
