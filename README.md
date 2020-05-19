@@ -1,4 +1,4 @@
-# termtodo
+# termtodo [![Build Status](https://travis-ci.com/mlowicki/termtodo.svg?token=Wu2ZDxNBSqPxs4JUg6tc&branch=master)](https://travis-ci.com/mlowicki/termtodo)
 
 Minimalistic todo app for your terminal.
 
